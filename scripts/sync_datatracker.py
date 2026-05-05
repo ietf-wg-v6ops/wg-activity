@@ -187,7 +187,7 @@ def doc_body(doc: dict) -> str:
 # GitHub Projects v2 GraphQL helpers
 # ---------------------------------------------------------------------------
 
-def gh_graphql(query: str, variables: dict = None) -> dict:
+def gh_graphql(query: str, variables: dict = None, retries: int = 5) -> dict:
     headers = {
         "Authorization": f"Bearer {GITHUB_TOKEN}",
         "Content-Type": "application/json",
@@ -195,12 +195,19 @@ def gh_graphql(query: str, variables: dict = None) -> dict:
     payload = {"query": query}
     if variables:
         payload["variables"] = variables
-    resp = requests.post(GITHUB_GRAPHQL, json=payload, headers=headers, timeout=30)
-    resp.raise_for_status()
-    data = resp.json()
-    if "errors" in data:
-        raise RuntimeError(f"GraphQL errors: {json.dumps(data['errors'], indent=2)}")
-    return data["data"]
+    for attempt in range(1, retries + 1):
+        resp = requests.post(GITHUB_GRAPHQL, json=payload, headers=headers, timeout=30)
+        if resp.status_code in (502, 503, 504) and attempt < retries:
+            wait = 2 ** attempt
+            log.warning("GitHub API %s (attempt %d/%d), retrying in %ds…",
+                        resp.status_code, attempt, retries, wait)
+            time.sleep(wait)
+            continue
+        resp.raise_for_status()
+        data = resp.json()
+        if "errors" in data:
+            raise RuntimeError(f"GraphQL errors: {json.dumps(data['errors'], indent=2)}")
+        return data["data"]
 
 
 def get_project_meta(org: str, project_number: int) -> dict:
