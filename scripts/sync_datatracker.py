@@ -310,7 +310,7 @@ def add_draft_item(project_id: str, title: str, body: str) -> str:
         title: $title
         body: $body
       }) {
-        projectV2Item { id }
+        projectItem { id }
       }
     }
     """
@@ -319,7 +319,7 @@ def add_draft_item(project_id: str, title: str, body: str) -> str:
         "title": title,
         "body": body,
     })
-    return data["addProjectV2DraftIssue"]["projectV2Item"]["id"]
+    return data["addProjectV2DraftIssue"]["projectItem"]["id"]
 
 
 def set_item_status(project_id: str, item_id: str, field_id: str, option_id: str) -> None:
