@@ -1,0 +1,40 @@
+name: Sync Datatracker → GitHub Project
+
+on:
+  schedule:
+    # Run daily at 06:00 UTC
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      wg_acronym:
+        description: "WG acronym (default: v6ops)"
+        required: false
+        default: "v6ops"
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    name: Sync v6ops drafts to Project board
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run sync
+        env:
+          GITHUB_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          GITHUB_ORG: ietf-wg-v6ops
+          PROJECT_NUMBER: "1"
+          WG_ACRONYM: ${{ github.event.inputs.wg_acronym || 'v6ops' }}
+        run: python scripts/sync_datatracker.py
